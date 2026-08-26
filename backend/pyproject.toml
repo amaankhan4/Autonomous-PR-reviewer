@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autonomous-pr-reviewer"
+version = "0.1.0"
+description = "AI-powered GitHub App that reviews pull requests using deterministic analysis + repository-aware LLM reasoning"
+requires-python = ">=3.12"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = [
+    "ignore::DeprecationWarning:passlib.*",
+]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = [".venv", "alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "C4", "SIM"]
+ignore = ["B008", "E501"]
+
+[tool.ruff.lint.isort]
+# The local `alembic/` migrations directory makes ruff classify the installed
+# Alembic package as first-party. It is not.
+known-third-party = ["alembic"]
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+warn_unused_ignores = false
+warn_redundant_casts = true
+no_implicit_optional = true
+plugins = []
+exclude = "(\\.venv|alembic)"
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true

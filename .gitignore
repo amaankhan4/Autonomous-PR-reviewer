@@ -1,0 +1,66 @@
+# ---------------------------------------------------------------- secrets
+# Never commit real credentials. Only *.example files belong in git.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# ----------------------------------------------------------------- python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.venv/
+venv/
+env/
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ------------------------------------------------------------------ tests
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+junit.xml
+
+# --------------------------------------------------------------- database
+*.db
+*.sqlite
+*.sqlite3
+openapi_tmp.db
+
+# ------------------------------------------------------- local vector data
+.vectorstore/
+qdrant_storage/
+
+# ------------------------------------------------------------------- node
+node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ------------------------------------------------------------------- logs
+*.log
+logs/
+
+# ------------------------------------------------------------------- IDEs
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# ------------------------------------------------------------------- OS
+.DS_Store
+Thumbs.db
+desktop.ini

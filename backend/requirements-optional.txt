@@ -1,0 +1,6 @@
+# Optional: tree-sitter grammars for JavaScript / TypeScript AST analysis.
+# The backend degrades gracefully (reports "unsupported language") when these
+# are not installed, so they are kept out of the base requirements file.
+tree-sitter==0.23.2
+tree-sitter-javascript==0.23.1
+tree-sitter-typescript==0.23.2
