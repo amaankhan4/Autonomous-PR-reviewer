@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-surface text-slate-200 antialiased;
+    font-feature-settings: 'cv02', 'cv03', 'cv04';
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-slate-700;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-600;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-surface-border bg-surface-raised shadow-sm;
+  }
+
+  .card-header {
+    @apply flex items-center justify-between gap-3 border-b border-surface-border px-5 py-3.5;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm
+      font-medium transition-colors focus:outline-none focus-visible:ring-2
+      focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent text-white hover:bg-accent-muted;
+  }
+
+  .btn-secondary {
+    @apply btn border border-surface-border bg-surface-overlay text-slate-200
+      hover:border-slate-500 hover:bg-surface-border/60;
+  }
+
+  .btn-ghost {
+    @apply btn text-slate-400 hover:bg-surface-overlay hover:text-slate-100;
+  }
+
+  .btn-danger {
+    @apply btn border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-surface-border bg-surface px-3 py-2 text-sm
+      text-slate-100 placeholder:text-slate-500 focus:border-accent focus:outline-none
+      focus:ring-1 focus:ring-accent;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-400;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+
+  .table-wrap {
+    @apply overflow-x-auto;
+  }
+
+  .data-table {
+    @apply w-full border-collapse text-sm;
+  }
+
+  .data-table thead th {
+    @apply border-b border-surface-border px-4 py-2.5 text-left text-xs font-semibold
+      uppercase tracking-wide text-slate-400;
+  }
+
+  .data-table tbody td {
+    @apply border-b border-surface-border/60 px-4 py-3 align-middle text-slate-300;
+  }
+
+  .data-table tbody tr:hover {
+    @apply bg-surface-overlay/60;
+  }
+
+  .link {
+    @apply text-accent hover:underline;
+  }
+
+  .prose-review {
+    @apply text-sm leading-relaxed text-slate-300;
+  }
+
+  .prose-review code {
+    @apply rounded bg-surface-overlay px-1 py-0.5 font-mono text-[0.8125rem] text-sky-300;
+  }
+}
