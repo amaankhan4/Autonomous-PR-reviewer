@@ -1,0 +1,129 @@
+# Full local stack: Postgres, Redis, Qdrant, the API, a Celery worker and the
+# dashboard. Defaults are chosen so `docker compose up` produces a working
+# product with no external accounts — mock GitHub, mock LLM, local Qdrant.
+#
+# To review real pull requests with a real model, set MOCK_GITHUB=false,
+# LLM_PROVIDER=openai and supply the GitHub App + OpenAI credentials.
+
+name: autonomous-pr-reviewer
+
+x-backend-env: &backend-env
+  # "staging" (not "local") so the app never runs create_all -- the schema is
+  # owned by Alembic here.
+  ENVIRONMENT: ${ENVIRONMENT:-staging}
+  SECRET_KEY: ${SECRET_KEY:-dev-insecure-secret-change-me}
+  DATABASE_URL: postgresql+asyncpg://prreviewer:prreviewer@postgres:5432/prreviewer
+  REDIS_URL: redis://redis:6379/0
+  CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+  FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+
+  # Vector store: the bundled Qdrant instance.
+  VECTOR_STORE: ${VECTOR_STORE:-qdrant}
+  QDRANT_URL: http://qdrant:6333
+  QDRANT_COLLECTION: ${QDRANT_COLLECTION:-repo_context}
+  EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-hashing}
+  EMBEDDING_DIM: ${EMBEDDING_DIM:-384}
+
+  # Providers default to mocks so the stack is self-contained and offline.
+  MOCK_GITHUB: ${MOCK_GITHUB:-true}
+  LLM_PROVIDER: ${LLM_PROVIDER:-mock}
+  LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  SEED_DEMO_DATA: ${SEED_DEMO_DATA:-true}
+
+  # GitHub App credentials (only needed when MOCK_GITHUB=false).
+  GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+  GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY:-}
+  GITHUB_WEBHOOK_SECRET: ${GITHUB_WEBHOOK_SECRET:-dev-webhook-secret}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: prreviewer
+      POSTGRES_PASSWORD: prreviewer
+      POSTGRES_DB: prreviewer
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U prreviewer -d prreviewer']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'yes']
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  qdrant:
+    image: qdrant/qdrant:v1.12.4
+    volumes:
+      - qdrant-data:/qdrant/storage
+    healthcheck:
+      # The Qdrant image has no curl/wget, but it does ship bash, which can
+      # open a TCP connection through /dev/tcp.
+      test: ['CMD-SHELL', 'bash -c "exec 3<>/dev/tcp/localhost/6333"']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ./backend
+    environment: *backend-env
+    # Postgres deployments get their schema from Alembic, not create_all.
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --proxy-headers"
+    ports:
+      - '${API_PORT:-8000}:8000'
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      qdrant: { condition: service_healthy }
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ./backend
+    environment: *backend-env
+    command: >
+      celery -A app.workers.celery_app:celery_app worker
+             --loglevel=info
+             --queues=review_queue,index_queue
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      qdrant: { condition: service_healthy }
+      api: { condition: service_started }
+    healthcheck:
+      test: ['CMD-SHELL', 'celery -A app.workers.celery_app:celery_app inspect ping -d celery@$$HOSTNAME']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - '${WEB_PORT:-3000}:80'
+    depends_on:
+      api: { condition: service_started }
+    restart: unless-stopped
+
+volumes:
+  postgres-data:
+  redis-data:
+  qdrant-data:
