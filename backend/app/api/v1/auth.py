@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from hmac import compare_digest
+
 from fastapi import APIRouter, Request, status
 from sqlalchemy import func, select
 
@@ -33,6 +35,21 @@ from app.services.audit import record_audit
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _is_demo_login(email: str, password: str) -> bool:
+    """Return whether a request uses the public demo credentials.
+
+    The demo password is intentionally made available by ``/config`` when demo
+    mode is enabled.  Constant-time comparison is still useful here because it
+    keeps this convenience path from creating a separate timing signal.
+    """
+    return (
+        settings.SEED_DEMO_DATA
+        and settings.demo_mode
+        and email.lower() == settings.DEMO_USER_EMAIL.lower()
+        and compare_digest(password, settings.DEMO_USER_PASSWORD)
+    )
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
@@ -73,6 +90,14 @@ async def register(payload: RegisterRequest, request: Request, db: DbSession) ->
 
 @router.post("/login", response_model=TokenResponse)
 async def login(payload: LoginRequest, request: Request, db: DbSession) -> TokenResponse:
+    # Serverless runtimes can serve an authentication request before a cold
+    # instance has completed its lifespan seed. Make the public demo button
+    # reliable by idempotently ensuring its account and fixtures exist here.
+    if _is_demo_login(payload.email, payload.password):
+        from app.demo.seed import seed_demo_data
+
+        await seed_demo_data(db)
+
     result = await db.execute(select(User).where(func.lower(User.email) == payload.email.lower()))
     user = result.scalar_one_or_none()
 

@@ -8,7 +8,11 @@ import { Spinner } from '../components/ui'
 
 export default function LoginPage() {
   const { user, loading, login, register } = useAuth()
-  const { data: config } = useConfig()
+  const {
+    data: config,
+    isLoading: configLoading,
+    refetch: refetchConfig,
+  } = useConfig()
   const navigate = useNavigate()
   const location = useLocation()
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -63,18 +67,20 @@ export default function LoginPage() {
 
   const tryDemo = async () => {
     setError(null)
-    if (!config?.demo_credentials) {
-      setError('Demo mode is disabled on this backend, so there is no seeded account.')
-      return
-    }
     setBusy(true)
     try {
-      await login(config.demo_credentials.email, config.demo_credentials.password)
+      // A cold serverless function can make the initial config request fail or
+      // race its seed. Re-fetch at click time so the action is never inert.
+      const latestConfig = config ?? (await refetchConfig()).data
+      const credentials = latestConfig?.demo_credentials
+      if (!credentials) {
+        setError('Demo mode is disabled on this backend, so there is no seeded account.')
+        return
+      }
+      await login(credentials.email, credentials.password)
       navigate('/', { replace: true })
     } catch {
-      setError(
-        'The demo account is not seeded yet. Start the API with SEED_DEMO_DATA=true, or register below.',
-      )
+      setError('Demo sign-in failed. Check that the API deployment is healthy and try again.')
     } finally {
       setBusy(false)
     }
@@ -226,11 +232,11 @@ export default function LoginPage() {
               type="button"
               className="text-slate-500 hover:text-slate-300"
               onClick={() => void tryDemo()}
-              disabled={busy || !config?.demo_credentials}
+              disabled={busy || configLoading}
               title={
                 config?.demo_credentials
                   ? `Signs in as ${config.demo_credentials.email}`
-                  : 'Demo seeding is disabled on this backend'
+                  : 'Fetches the configured demo account and signs in'
               }
             >
               Use the demo account

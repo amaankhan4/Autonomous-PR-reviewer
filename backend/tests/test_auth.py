@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.core.config import settings
 from tests.conftest import auth_headers
 
 REGISTER = {
@@ -61,6 +62,17 @@ async def test_login_unknown_email_is_401_not_404(client):
     )
     assert response.status_code == 401
     assert response.json()["error"]["code"] == "INVALID_CREDENTIALS"
+
+
+async def test_demo_login_seeds_account_when_needed(client, monkeypatch):
+    """The demo button must work even when a serverless cold start skipped seeding."""
+    monkeypatch.setattr(settings, "SEED_DEMO_DATA", True)
+    response = await client.post(
+        "/api/v1/auth/login",
+        json={"email": settings.DEMO_USER_EMAIL, "password": settings.DEMO_USER_PASSWORD},
+    )
+    assert response.status_code == 200, response.text
+    assert response.json()["access_token"]
 
 
 async def test_me_requires_authentication(client):
