@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from functools import lru_cache
 from typing import Annotated, Literal
-from urllib.parse import quote, urlparse
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlsplit, urlunsplit
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
@@ -211,12 +211,36 @@ class Settings(BaseSettings):
 
         Render, Neon, and most other providers expose ``postgresql://`` URLs,
         whereas this async SQLAlchemy application requires the ``asyncpg``
-        dialect explicitly.  Keeping the conversion here lets a deploy use the
-        provider URL unchanged and does not affect already-correct URLs.
+        dialect explicitly.  Neon URLs can also include libpq-only options
+        such as ``channel_binding``.  SQLAlchemy passes URL query parameters
+        to asyncpg as keyword arguments, where that option is invalid.  Keep
+        TLS enabled by translating ``sslmode`` to asyncpg's ``ssl`` option and
+        discard only the unsupported channel-binding setting.
         """
-        if isinstance(value, str) and value.startswith("postgresql://"):
-            return value.replace("postgresql://", "postgresql+asyncpg://", 1)
-        return value
+        if not isinstance(value, str):
+            return value
+
+        if value.startswith("postgres://"):
+            value = value.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif value.startswith("postgresql://"):
+            value = value.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+        if not value.startswith("postgresql+asyncpg://"):
+            return value
+
+        parts = urlsplit(value)
+        query = parse_qsl(parts.query, keep_blank_values=True)
+        normalised_query: list[tuple[str, str]] = []
+        has_ssl = any(key == "ssl" for key, _ in query)
+        for key, item in query:
+            if key == "channel_binding":
+                continue
+            if key == "sslmode":
+                if not has_ssl:
+                    normalised_query.append(("ssl", item))
+                continue
+            normalised_query.append((key, item))
+        return urlunsplit(parts._replace(query=urlencode(normalised_query)))
 
     @field_validator("GITHUB_APP_PRIVATE_KEY", mode="before")
     @classmethod

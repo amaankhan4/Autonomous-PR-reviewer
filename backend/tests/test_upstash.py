@@ -209,6 +209,28 @@ class TestRedisUrlDerivation:
         assert s.broker_url == s.redis_url == s.result_backend
 
 
+class TestDatabaseUrlNormalisation:
+    def test_converts_neon_libpq_options_for_asyncpg(self):
+        settings = Settings(
+            DATABASE_URL=(
+                "postgresql://user:password@ep-example.us-east-2.aws.neon.tech/neondb"
+                "?sslmode=require&channel_binding=require"
+            )
+        )
+
+        assert settings.DATABASE_URL == (
+            "postgresql+asyncpg://user:password@ep-example.us-east-2.aws.neon.tech/neondb"
+            "?ssl=require"
+        )
+
+    def test_keeps_explicit_asyncpg_ssl_option(self):
+        settings = Settings(
+            DATABASE_URL="postgresql+asyncpg://user:password@db.example/neondb?ssl=require"
+        )
+
+        assert settings.DATABASE_URL.endswith("?ssl=require")
+
+
 class TestVectorConfiguredFlag:
     def test_false_when_unset(self):
         assert Settings(UPSTASH_VECTOR_REST_URL=None, UPSTASH_VECTOR_REST_TOKEN=None).upstash_vector_configured is False
