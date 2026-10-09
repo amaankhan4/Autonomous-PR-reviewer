@@ -2,8 +2,52 @@
 
 This repository supports a portfolio/demo deployment without Docker:
 
-- **Frontend:** Vercel, with `frontend` selected as the Root Directory.
-- **API and database:** Render Blueprint, using `render.yaml` at the repository root.
+- **One Vercel project:** frontend and API as Vercel Services, with the
+  repository root selected.
+- **Database:** hosted PostgreSQL.
+- **Alternative API host:** Render Blueprint, using `render.yaml` at the
+  repository root.
+
+## Vercel Services deployment
+
+The root `vercel.json` defines two services in one Vercel project:
+
+- `frontend` handles all non-API paths, including React client-side routes.
+- `backend` handles `/api/*`, preserving the FastAPI application's existing
+  `/api/v1/*` route paths.
+
+The browser calls `/api/v1/*` on the same domain, so leave
+`VITE_API_BASE_URL` empty. No Vercel service binding is required: bindings are
+for private, server-to-server service calls, and this application has none.
+
+Configure the following Vercel environment variables for the demo profile:
+
+```
+DATABASE_URL=<hosted Postgres connection string>
+SECRET_KEY=<long random value>
+ENVIRONMENT=production
+DEBUG=false
+MOCK_GITHUB=true
+LLM_PROVIDER=mock
+VECTOR_STORE=memory
+CELERY_TASK_ALWAYS_EAGER=true
+SEED_DEMO_DATA=true
+PUBLISH_REVIEWS=false
+FRONTEND_URL=https://YOUR-PROJECT.vercel.app
+CORS_ORIGINS=https://YOUR-PROJECT.vercel.app
+```
+
+Apply Alembic migrations to the hosted database before the first production
+request (for example from a machine with `backend` dependencies installed):
+
+```
+cd backend
+alembic upgrade head
+```
+
+The Vercel backend is appropriate for the inline/mock portfolio demo. A real
+GitHub App deployment still requires an always-running worker, Redis, and
+persistent vector storage.
 
 ## 1. Deploy the API
 
