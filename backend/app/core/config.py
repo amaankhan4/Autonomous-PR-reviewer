@@ -204,6 +204,20 @@ class Settings(BaseSettings):
             return [item.strip() for item in stripped.split(",") if item.strip()]
         return value
 
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def _normalise_database_url(cls, value: object) -> object:
+        """Accept the standard PostgreSQL URL emitted by managed hosts.
+
+        Render, Neon, and most other providers expose ``postgresql://`` URLs,
+        whereas this async SQLAlchemy application requires the ``asyncpg``
+        dialect explicitly.  Keeping the conversion here lets a deploy use the
+        provider URL unchanged and does not affect already-correct URLs.
+        """
+        if isinstance(value, str) and value.startswith("postgresql://"):
+            return value.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return value
+
     @field_validator("GITHUB_APP_PRIVATE_KEY", mode="before")
     @classmethod
     def _normalise_pem(cls, value: object) -> object:
