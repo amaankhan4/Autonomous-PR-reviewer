@@ -368,6 +368,13 @@ OPENAI_API_KEY=sk-...
 Webhook signatures are verified with HMAC-SHA256 in constant time; unsigned or
 mismatched deliveries are rejected and audited.
 
+5. Restart the backend, then sign in. The **Settings → GitHub installations**
+   card (and the **Repositories** page) shows an *Installation ID* field once a
+   real GitHub App is configured — enter the installation id (the number in the
+   app's installation URL, `https://github.com/settings/installations/<id>`)
+   and click **Connect**. The App's repositories are mirrored into the
+   dashboard, where each can be activated and indexed.
+
 By default the app posts `COMMENT` reviews and never auto-blocks a PR
 (`DEFAULT_REVIEW_EVENT=COMMENT`). Set `PUBLISH_REVIEWS=false` to run in
 shadow mode — full analysis, results visible in the dashboard, nothing written

@@ -79,8 +79,12 @@ export default function LoginPage() {
       }
       await login(credentials.email, credentials.password)
       navigate('/', { replace: true })
-    } catch {
-      setError('Demo sign-in failed. Check that the API deployment is healthy and try again.')
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? `Demo sign-in failed: ${err.message}`
+          : 'Demo sign-in failed. Check that the API deployment is healthy and try again.',
+      )
     } finally {
       setBusy(false)
     }

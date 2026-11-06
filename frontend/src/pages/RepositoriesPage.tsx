@@ -13,6 +13,7 @@ import {
   Spinner,
 } from '../components/ui'
 import {
+  useConfig,
   useConnectInstallation,
   useInstallations,
   useRepositories,
@@ -48,7 +49,9 @@ export default function RepositoriesPage() {
   }
   const { data, isLoading, isError, error, refetch } = useRepositories(params)
   const installations = useInstallations()
+  const config = useConfig()
   const connect = useConnectInstallation()
+  const [installationId, setInstallationId] = useState('')
 
   const resetPage = <T,>(setter: (value: T) => void) => (value: T) => {
     setter(value)
@@ -61,17 +64,30 @@ export default function RepositoriesPage() {
         title="Repositories"
         description="Repositories reachable through your GitHub App installations."
         action={
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={connect.isPending}
-            onClick={() => connect.mutate(undefined)}
-          >
-            {connect.isPending ? <Spinner /> : null}
-            {installations.data && installations.data.length > 0
-              ? 'Sync repositories'
-              : 'Connect installation'}
-          </button>
+          <div className="flex items-center gap-2">
+            {config.data && !config.data.mock_github ? (
+              <input
+                type="number"
+                min={1}
+                placeholder="Installation ID"
+                className="input w-32"
+                aria-label="GitHub App installation ID"
+                value={installationId}
+                onChange={(e) => setInstallationId(e.target.value)}
+              />
+            ) : null}
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={connect.isPending}
+              onClick={() => connect.mutate(installationId ? Number(installationId) : undefined)}
+            >
+              {connect.isPending ? <Spinner /> : null}
+              {installations.data && installations.data.length > 0
+                ? 'Sync repositories'
+                : 'Connect installation'}
+            </button>
+          </div>
         }
       />
 
@@ -160,7 +176,7 @@ export default function RepositoriesPage() {
                 type="button"
                 className="btn-primary"
                 disabled={connect.isPending}
-                onClick={() => connect.mutate(undefined)}
+                onClick={() => connect.mutate(installationId ? Number(installationId) : undefined)}
               >
                 Connect installation
               </button>

@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import {
   Card,
   CardHeader,
@@ -79,6 +81,7 @@ export default function SettingsPage() {
   const installations = useInstallations()
   const queue = useQueueStats()
   const connect = useConnectInstallation()
+  const [installationId, setInstallationId] = useState('')
 
   return (
     <div className="space-y-6">
@@ -104,17 +107,35 @@ export default function SettingsPage() {
           <CardHeader
             title="GitHub installations"
             action={
-              <button
-                type="button"
-                className="btn-secondary px-2.5 py-1 text-xs"
-                disabled={connect.isPending}
-                onClick={() => connect.mutate(undefined)}
-              >
-                {connect.isPending ? <Spinner className="h-3 w-3" /> : null}
-                Connect
-              </button>
+              <div className="flex items-center gap-2">
+                {config.data && !config.data.mock_github ? (
+                  <input
+                    type="number"
+                    min={1}
+                    placeholder="Installation ID"
+                    className="input w-32 px-2.5 py-1 text-xs"
+                    aria-label="GitHub App installation ID"
+                    value={installationId}
+                    onChange={(e) => setInstallationId(e.target.value)}
+                  />
+                ) : null}
+                <button
+                  type="button"
+                  className="btn-secondary px-2.5 py-1 text-xs"
+                  disabled={connect.isPending}
+                  onClick={() => connect.mutate(installationId ? Number(installationId) : undefined)}
+                >
+                  {connect.isPending ? <Spinner className="h-3 w-3" /> : null}
+                  Connect
+                </button>
+              </div>
             }
           />
+          {connect.isError ? (
+            <p className="border-b border-surface-border/60 px-5 py-2 text-xs text-red-400">
+              {connect.error instanceof Error ? connect.error.message : 'Could not connect.'}
+            </p>
+          ) : null}
           {installations.isLoading ? (
             <LoadingBlock />
           ) : installations.data && installations.data.length > 0 ? (
